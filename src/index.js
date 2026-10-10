@@ -1,4 +1,4 @@
-// leptris-wasm — XML for JavaScript at libleptris speed.
+// leptris — XML for JavaScript at libleptris speed.
 //
 // ES module over the wasm bridge: parse, serialize, XPath string
 // evaluation. Documents live in the wasm registry addressed by an

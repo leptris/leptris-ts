@@ -1,10 +1,10 @@
-# leptris-wasm
+# leptris
 
 XML for JavaScript at [libleptris](https://github.com/leptris/leptris)
 speed — the engine compiled to WebAssembly (ES module, no fallback).
 
 ```js
-import { load, xml, xpath, close } from "leptris-wasm";
+import { load, xml, xpath, close } from "leptris";
 
 const doc = await load('<catalog><item id="1">Hello</item></catalog>');
 const out = await xml(doc);            // canonical XML emit
@@ -41,5 +41,5 @@ registry size (64 live documents).
 
 ## Status
 
-Local build, tests green. Not yet published to npm; the repository
-lives at `leptris/leptris-wasm` once created.
+Published to npm as **`leptris`** (tag-triggered CI build). Source
+lives at [leptris/leptris-wasm](https://github.com/leptris/leptris-wasm).

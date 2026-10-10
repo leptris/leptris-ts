@@ -1,4 +1,4 @@
-// leptris-wasm — TypeScript typings.
+// leptris — TypeScript typings.
 export const VERSION: string;
 
 export class XmlError extends Error {

@@ -1,5 +1,5 @@
 {
-  "name": "leptris-wasm",
+  "name": "leptris",
   "version": "0.1.0",
   "description": "XML for JavaScript at libleptris speed (WebAssembly, no fallback)",
   "type": "module",
