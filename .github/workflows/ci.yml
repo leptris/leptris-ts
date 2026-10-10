@@ -19,8 +19,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Engine sources (pinned release)
-        run: git clone --depth 1 --branch v${ENGINE_VERSION} \
-          https://github.com/leptris/leptris.git leptris
+        run: git clone --depth 1 --branch "v${ENGINE_VERSION}" https://github.com/leptris/leptris.git leptris
         env:
           ENGINE_VERSION: "1.9.334"
       - uses: mymindstorm/setup-emsdk@v14
