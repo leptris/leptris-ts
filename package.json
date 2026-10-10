@@ -1,0 +1,23 @@
+{
+  "name": "leptris-wasm",
+  "version": "0.1.0",
+  "description": "XML for JavaScript at libleptris speed (WebAssembly, no fallback)",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "./build.sh",
+    "test": "node --test test/test.mjs"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

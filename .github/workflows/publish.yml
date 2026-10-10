@@ -1,0 +1,39 @@
+name: Publish to npm
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# NPM publishing needs the NPM_TOKEN secret (npm automation token,
+# publish access for the leptris org scope). Provenance rides the
+# OIDC id-token.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Engine sources (pinned release)
+        run: git clone --depth 1 --branch v${ENGINE_VERSION} \
+          https://github.com/leptris/leptris.git leptris
+        env:
+          ENGINE_VERSION: "1.9.334"
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+      - name: Build
+        run: ENGINESRC=$GITHUB_WORKSPACE/leptris/src ./build.sh
+      - name: Test
+        run: node --test test/test.mjs
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
