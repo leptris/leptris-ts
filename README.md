@@ -42,4 +42,4 @@ registry size (64 live documents).
 ## Status
 
 Published to npm as **`leptris`** (tag-triggered CI build). Source
-lives at [leptris/leptris-wasm](https://github.com/leptris/leptris-wasm).
+lives at [leptris/leptris-ts](https://github.com/leptris/leptris-ts).
