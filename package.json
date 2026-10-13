@@ -17,6 +17,10 @@
     "test": "node --test test/test.mjs"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leptris/leptris-ts.git"
+  },
   "engines": {
     "node": ">=20"
   }
