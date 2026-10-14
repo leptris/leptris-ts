@@ -5,9 +5,12 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
-# NPM publishing needs the NPM_TOKEN secret (npm automation token,
-# publish access for the leptris org scope). Provenance rides the
-# OIDC id-token.
+# npm trusted publishing: the workflow authenticates via the OIDC
+# id-token (no NPM_TOKEN secret). The package's publisher settings on
+# npmjs.com must register exactly:
+#   owner/repository: leptris/leptris-ts   workflow: publish.yml
+#   environment: npm
+# Provenance rides the same id-token.
 permissions:
   contents: read
   id-token: write
@@ -15,12 +18,16 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: npm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      # Node 22 bundles npm 10.x; trusted publishing needs npm >= 11.5.1.
+      - name: npm CLI for trusted publishing
+        run: npm install -g npm@^11
       - name: Engine sources (pinned release)
         run: git clone --depth 1 --branch "v${ENGINE_VERSION}" https://github.com/leptris/leptris.git leptris
         env:
@@ -34,5 +41,3 @@ jobs:
         run: node --test test/test.mjs
       - name: Publish
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
