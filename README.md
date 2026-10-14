@@ -3,6 +3,10 @@
 XML for JavaScript at [libleptris](https://github.com/leptris/leptris)
 speed — the engine compiled to WebAssembly (ES module, no fallback).
 
+```sh
+npm install leptris
+```
+
 ```js
 import { load, xml, xpath, close } from "leptris";
 
@@ -21,7 +25,7 @@ await close(doc);
 - `close(doc)` — release the document.
 - `version()` — the engine's version string.
 
-The same model as [teptris-wasm](https://github.com/leptris/teptris-wasm)
+The same model as [teptris-ts](https://github.com/leptris/teptris-ts)
 and [yeptris-wasm](https://github.com/leptris/yeptris-wasm): a
 contained C bridge (`src/leptris_wasm.c`) over the engine, compiled by
 `build.sh` (emcc) from a sibling engine checkout, surfaced as an ES
