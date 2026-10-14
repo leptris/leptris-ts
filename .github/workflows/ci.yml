@@ -25,7 +25,16 @@ jobs:
       - uses: mymindstorm/setup-emsdk@v14
         with:
           version: 3.1.74
-      - name: Build
-        run: ENGINESRC=$GITHUB_WORKSPACE/leptris/src ./build.sh
+      - name: Build (zero-warning gate)
+        run: |
+          ENGINESRC=$GITHUB_WORKSPACE/leptris/src ./build.sh 2>&1 | tee build.log
+          # The wasm32 build is the only lane that compiles the
+          # engine with 32-bit size_t/uintptr_t — warnings there are
+          # real portability bugs (truncated 64-bit constants, UB
+          # shifts), not noise. The gate stays zero-tolerance.
+          ! grep -q "warning:" build.log || {
+            echo "::error::emcc emitted warnings — wasm32 portability class, fix in leptris/leptris"
+            exit 1
+          }
       - name: Test
         run: node --test test/test.mjs
