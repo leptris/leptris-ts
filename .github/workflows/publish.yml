@@ -9,8 +9,8 @@ on:
 # id-token (no NPM_TOKEN secret). The package's publisher settings on
 # npmjs.com must register exactly:
 #   owner/repository: leptris/leptris-ts   workflow: publish.yml
-#   environment: npm
-# Provenance rides the same id-token.
+# (no environment claim — the repo's protection rules gate the
+# workflow; provenance rides the same id-token).
 permissions:
   contents: read
   id-token: write
