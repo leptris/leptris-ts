@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { init, load, loadSync, tree, treeSync, xmlSync, xpathSync, closeSync, version, VERSION, XmlError } from "../src/index.js";
 
 const entrypoint = new URL("../src/index.js", import.meta.url).href;
@@ -78,6 +79,8 @@ test("invalid handles and malformed input fail without consuming registry slots"
 });
 
 test("built engine version matches wrapper pin",async()=>{
+  const pin=JSON.parse(readFileSync(new URL("../engine.json",import.meta.url),"utf8"));
+  assert.equal(pin.version,VERSION);
   assert.equal(await version(),VERSION);
 });
 
