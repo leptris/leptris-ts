@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "./build.sh",
-    "test": "node --test test/test.mjs"
+    "test": "node --test test/*.test.mjs test/test.mjs"
   },
   "license": "MIT",
   "repository": {

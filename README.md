@@ -35,7 +35,7 @@ module with TypeScript typings (`src/index.d.ts`).
 
 ```sh
 ENGINESRC=../leptris/src ./build.sh   # emcc; any Emscripten ≥ 3
-node --test test/test.mjs
+npm test
 ```
 
 `utf8proc` and `iconv` are compiled out (the engine's
@@ -47,3 +47,39 @@ registry size (64 live documents).
 
 Published to npm as **`leptris`** (tag-triggered CI build). Source
 lives at [leptris/leptris-ts](https://github.com/leptris/leptris-ts).
+
+## Structured XML access
+
+`tree(doc)` returns a detached snapshot of the document element and its
+children. Element snapshots contain `name` (qualified), `localName`, `prefix`,
+`namespaceURI`, ordered `attributes` pairs and ordered `children`. Attributes
+include the element's own `xmlns` declarations in source order. Ordinary attribute
+values are decoded by the engine; namespace declaration values retain their
+original lexical spelling (including entity references). `namespaceURI` reports
+the engine's resolved namespace value. Child kinds are
+`element`, `text`, `cdata`, `comment`, `pi` and `entity`. Document-level prolog
+and epilog nodes are outside this root snapshot. Unsupported engine node kinds
+cause an error rather than being silently omitted. Snapshots remain valid after
+`close(doc)` and editing them does not mutate the document.
+
+Applications with synchronous processing can initialize the WASM module once:
+
+```js
+import { init, loadSync, treeSync, closeSync } from "leptris";
+
+await init();
+const doc = loadSync('<m:math xmlns:m="urn:math"><m:mi>x</m:mi></m:math>');
+try {
+  const root = treeSync(doc);
+  console.log(root.namespaceURI, root.children[0].localName);
+} finally {
+  closeSync(doc);
+}
+```
+
+`loadSync`, `xmlSync`, `xpathSync`, `treeSync` and `closeSync` require a
+successful `await init()` first; they throw before initialization. Existing
+async operations remain available, and concurrent first calls share the same
+initialization. Always release documents in `finally`: the registry still
+supports at most 64 live documents. Snapshots describe this XML engine's data;
+compatibility with another parser's nonstandard behavior belongs to consumers.

@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
@@ -37,4 +36,10 @@ jobs:
             exit 1
           }
       - name: Test
-        run: node --test test/test.mjs
+        run: node --test test/*.test.mjs test/test.mjs
+      - name: WASM artifact for consumer verification
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == 20 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: leptris-wasm
+          path: dist/
