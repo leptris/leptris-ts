@@ -83,3 +83,13 @@ async operations remain available, and concurrent first calls share the same
 initialization. Always release documents in `finally`: the registry still
 supports at most 64 live documents. Snapshots describe this XML engine's data;
 compatibility with another parser's nonstandard behavior belongs to consumers.
+
+## Engine source provenance
+
+`engine.json` pins the engine repository, full source commit and version used
+by both CI and publishing. The build reads the same version, and the package
+includes the pin for reproducibility. This candidate points to the separate
+namespace-cache initialization fix in `suleman-uzair/leptris`; it is a patched
+1.9.356 development source, not a new official engine release. The pin can move
+to the official repository after that fix is accepted upstream. No release or
+package version is changed by this integration branch.
