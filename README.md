@@ -90,6 +90,6 @@ compatibility with another parser's nonstandard behavior belongs to consumers.
 by both CI and publishing. The build reads the same version, and the package
 includes the pin for reproducibility. This candidate points to the separate
 namespace-cache initialization fix in `suleman-uzair/leptris`; it is a patched
-1.9.356 development source, not a new official engine release. The pin can move
+1.9.359 development source, not a new official engine release. The pin can move
 to the official repository after that fix is accepted upstream. No release or
 package version is changed by this integration branch.
