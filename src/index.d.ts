@@ -57,7 +57,5 @@ export type XmlNode = XmlElement | XmlText | XmlInstruction | XmlEntityReference
 export function tree(id: number): Promise<XmlElement>;
 /** All Sync functions require one successful await init() first. */
 export function loadSync(xml: string): number;
-export function xmlSync(id: number): string;
-export function xpathSync(id: number, expr: string): string | null;
 export function closeSync(id: number): void;
 export function treeSync(id: number): XmlElement;
