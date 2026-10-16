@@ -62,13 +62,13 @@ and epilog nodes are outside this root snapshot. Unsupported engine node kinds
 cause an error rather than being silently omitted. Snapshots remain valid after
 `close(doc)` and editing them does not mutate the document.
 
-Applications with synchronous processing can initialize the WASM module once:
+After initialization, synchronous operations are also available:
 
 ```js
 import { init, loadSync, treeSync, closeSync } from "leptris";
 
 await init();
-const doc = loadSync('<m:math xmlns:m="urn:math"><m:mi>x</m:mi></m:math>');
+const doc = loadSync('<root xmlns="urn:example"><item>x</item></root>');
 try {
   const root = treeSync(doc);
   console.log(root.namespaceURI, root.children[0].localName);
@@ -77,19 +77,8 @@ try {
 }
 ```
 
-`loadSync`, `xmlSync`, `xpathSync`, `treeSync` and `closeSync` require a
-successful `await init()` first; they throw before initialization. Existing
-async operations remain available, and concurrent first calls share the same
-initialization. Always release documents in `finally`: the registry still
-supports at most 64 live documents. Snapshots describe this XML engine's data;
-compatibility with another parser's nonstandard behavior belongs to consumers.
-
-## Engine source provenance
-
-`engine.json` pins the engine repository, full source commit and version used
-by both CI and publishing. The build reads the same version, and the package
-includes the pin for reproducibility. This candidate points to the separate
-namespace-cache initialization fix in `suleman-uzair/leptris`; it is a patched
-1.9.359 development source, not a new official engine release. The pin can move
-to the official repository after that fix is accepted upstream. No release or
-package version is changed by this integration branch.
+`loadSync`, `treeSync` and `closeSync` require a successful `await init()`
+first; they throw before initialization. Async `load`, `tree` and `close`
+remain available. Concurrent first calls share initialization. Always release
+documents in `finally`: the registry supports at most 64 live documents.
+TypeScript exposes snapshots as read-only views of detached data.

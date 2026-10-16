@@ -1,17 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { init, load, loadSync, tree, treeSync, xmlSync, xpathSync, closeSync, version, VERSION, XmlError } from "../src/index.js";
+import { init, load, loadSync, tree, treeSync, xml, xpath, closeSync, XmlError } from "../src/index.js";
 
 const entrypoint = new URL("../src/index.js", import.meta.url).href;
 
 test("synchronous operations require explicit initialization", () => {
   const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
     import assert from "node:assert/strict";
-    import { loadSync, xmlSync, treeSync, xpathSync, closeSync } from ${JSON.stringify(entrypoint)};
-    for (const operation of [() => loadSync("<r/>"), () => xmlSync(1),
-      () => treeSync(1), () => xpathSync(1, "/*"), () => closeSync(1)]) {
+    import { loadSync, treeSync, closeSync } from ${JSON.stringify(entrypoint)};
+    for (const operation of [() => loadSync("<r/>"),
+      () => treeSync(1), () => closeSync(1)]) {
       assert.throws(operation, /await init/);
     }
   `], {encoding:"utf8",timeout:30000});
@@ -33,8 +32,8 @@ test("mixed-content snapshot preserves namespaces, attribute order and node kind
     assert.deepEqual(snapshot.children.map(n=>n.kind),["text","cdata","comment","pi","element","text"]);
     assert.deepEqual(snapshot.children[3],{kind:"pi",target:"pi",text:"data"});
     assert.equal(snapshot.children[4].namespaceURI,"urn:p");
-    assert.equal(xpathSync(id,"count(//*)"),"2");
-    assert.match(xmlSync(id),/<p:r/);
+    assert.equal(await xpath(id,"count(//*)"),"2");
+    assert.match(await xml(id),/<p:r/);
     assert.deepEqual(await tree(id),snapshot);
   } finally { closeSync(id); }
 });
@@ -71,19 +70,12 @@ test("empty nodes and namespace undeclarations remain visible", async () => {
   } finally { closeSync(id); }
 });
 
-test("invalid handles and malformed input fail without consuming registry slots", async () => {
+test("invalid input throws and repeated loads remain usable", async () => {
   await init();
   assert.throws(()=>treeSync(0),XmlError);
   assert.throws(()=>loadSync('<r><a></r>'),XmlError);
   for(let i=0;i<100;i++) {const id=loadSync('<r/>'); try {assert.equal(treeSync(id).name,'r');} finally {closeSync(id);}}
 });
-
-test("built engine version matches wrapper pin",async()=>{
-  const pin=JSON.parse(readFileSync(new URL("../engine.json",import.meta.url),"utf8"));
-  assert.equal(pin.version,VERSION);
-  assert.equal(await version(),VERSION);
-});
-
 
 test("attribute snapshots support long namespace prefixes and distinct namespaces",async()=>{
   await init();

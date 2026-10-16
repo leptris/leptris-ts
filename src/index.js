@@ -4,7 +4,7 @@
 // evaluation. Documents live in the wasm registry addressed by an
 // integer id; load/close bracket their lifetime.
 
-export const VERSION = "1.9.359";
+export const VERSION = "1.9.356";
 
 export class XmlError extends Error {
   constructor(message, line, column) {
@@ -101,12 +101,6 @@ export function loadSync(xml) {
 /** Serialize a document to XML (the engine's canonical emit). */
 export async function xml(id) {
   await init();
-  return xmlSync(id);
-}
-
-/** Serialize synchronously after awaiting init(). */
-export function xmlSync(id) {
-  requireInitialized();
   const ptr = theMod._leptris_wasm_xml(id);
   if (!ptr) throw new XmlError("serialization failed", 0, 0);
   return readStr(ptr, true);
@@ -116,12 +110,6 @@ export function xmlSync(id) {
  * value, atomics yield their string form. NULL result = null. */
 export async function xpath(id, expr) {
   await init();
-  return xpathSync(id, expr);
-}
-
-/** Evaluate XPath synchronously after awaiting init(). */
-export function xpathSync(id, expr) {
-  requireInitialized();
   const buf = enc(expr);
   try {
     const ptr = theMod._leptris_wasm_xpath(id, buf);

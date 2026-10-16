@@ -10,8 +10,7 @@
   },
   "files": [
     "dist",
-    "src",
-    "engine.json"
+    "src"
   ],
   "scripts": {
     "build": "./build.sh",
