@@ -8,7 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 ENGINESRC="${ENGINESRC:-../leptris/src}"
-VERSION="${LEPTRIS_VERSION:-1.9.365}"
+VERSION="${LEPTRIS_VERSION:-1.9.366}"
 mkdir -p dist
 INC="-I$ENGINESRC/include -I$ENGINESRC \
  -I$ENGINESRC/leptris/dom -I$ENGINESRC/leptris/parse \
