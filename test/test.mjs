@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { load, xml, xpath, close, version, XmlError } from "../src/index.js";
+import { load, xml, xpath, tree, treeSync, close, version, XmlError } from "../src/index.js";
 
 const DOC = `<?xml version="1.0"?>
 <catalog id="c1">
@@ -24,6 +24,20 @@ test("xpath: string values and counts", async () => {
   assert.equal(await xpath(id, "count(//item)"), "2");
   assert.equal(await xpath(id, "//item[@kind]/@id"), "2");
   await close(id);
+});
+
+test("tree: synchronous and asynchronous snapshots", async () => {
+  const id = await load('<r a="1">text</r>');
+  try {
+    const snapshot = treeSync(id);
+    assert.equal(snapshot.kind, "element");
+    assert.equal(snapshot.name, "r");
+    assert.deepEqual(snapshot.attributes, [["a", "1"]]);
+    assert.deepEqual(snapshot.children, [{ kind: "text", text: "text" }]);
+    assert.deepEqual(await tree(id), snapshot);
+  } finally {
+    await close(id);
+  }
 });
 
 test("malformed input throws XmlError with position", async () => {
