@@ -31,7 +31,7 @@ jobs:
       - name: Engine sources (pinned release)
         run: git clone --depth 1 --branch "v${ENGINE_VERSION}" https://github.com/leptris/leptris.git leptris
         env:
-          ENGINE_VERSION: "1.9.373"
+          ENGINE_VERSION: "1.9.374"
       - uses: mymindstorm/setup-emsdk@v14
         with:
           version: 3.1.74
