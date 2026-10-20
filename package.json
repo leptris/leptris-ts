@@ -1,6 +1,6 @@
 {
   "name": "leptris",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "XML for JavaScript at libleptris speed (WebAssembly, no fallback)",
   "type": "module",
   "main": "src/index.js",
