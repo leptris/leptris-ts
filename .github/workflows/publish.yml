@@ -5,6 +5,13 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# One publish at a time; an already-published version is skipped by
+# the guard below, so a duplicate dispatch is a no-op instead of an
+# E409 failure.
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
 # npm trusted publishing: the workflow authenticates via the OIDC
 # id-token (no NPM_TOKEN secret). The package's publisher settings on
 # npmjs.com must register exactly:
@@ -39,5 +46,14 @@ jobs:
         run: ENGINESRC=$GITHUB_WORKSPACE/leptris/src ./build.sh
       - name: Test
         run: node --test test/test.mjs
+      - name: Skip if already published
+        id: published
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if npm view "leptris@$v" version >/dev/null 2>&1; then
+            echo "leptris@$v is already on npm — nothing to publish"
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish
+        if: steps.published.outputs.skip != '1'
         run: npm publish --provenance --access public
