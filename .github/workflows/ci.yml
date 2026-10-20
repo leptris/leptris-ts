@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  # github.ref is refs/pull/N/merge per PR (unique) and refs/heads/X
+  # per branch: a new push cancels the stale matrix instead of
+  # queueing six more jobs behind it.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     strategy:
