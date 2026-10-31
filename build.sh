@@ -25,7 +25,7 @@ emcc -O3 -std=c99 \
   $SOURCES \
   -s MODULARIZE=1 -s EXPORT_ES6=1 -s ENVIRONMENT=web,node \
   -s EXPORTED_RUNTIME_METHODS="['UTF8ToString','stringToUTF8','lengthBytesUTF8','HEAPU8','HEAP32']" \
-  -s EXPORTED_FUNCTIONS='["_leptris_wasm_tree","_leptris_wasm_load","_leptris_wasm_xml","_leptris_wasm_xml_len","_leptris_wasm_xpath","_leptris_wasm_close","_leptris_wasm_free_str","_leptris_wasm_last_error","_leptris_wasm_last_error_position","_leptris_wasm_version","_malloc","_free"]' \
+  -s EXPORTED_FUNCTIONS='["_leptris_wasm_tree","_leptris_wasm_load","_leptris_wasm_xml","_leptris_wasm_xml_len","_leptris_wasm_xpath","_leptris_wasm_xpath_full","_leptris_wasm_close","_leptris_wasm_free_str","_leptris_wasm_last_error","_leptris_wasm_last_error_position","_leptris_wasm_version","_malloc","_free"]' \
   -s WASM_BIGINT=1 \
   -s ALLOW_MEMORY_GROWTH=1 \
   -o dist/leptris.mjs

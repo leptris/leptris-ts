@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { load, xml, xpath, tree, treeSync, close, version, XmlError } from "../src/index.js";
+import { load, xml, xpath, xpathFull, tree, treeSync, close, version, XmlError } from "../src/index.js";
 
 const DOC = `<?xml version="1.0"?>
 <catalog id="c1">
@@ -54,4 +54,27 @@ test("empty and self-closing shapes", async () => {
 
 test("version", async () => {
   assert.match(await version(), /^1\./);
+});
+
+test("xpathFull exposes the engine result shape", async () => {
+  const id = await load("<r><a x='1'>t1</a><b/></r>");
+  try {
+    const nodes = await xpathFull(id, "//a");
+    assert.equal(nodes.kind, 0);
+    assert.equal(nodes.string, "t1");
+    assert.equal(nodes.nodes.length, 1);
+    assert.equal(nodes.nodes[0].name, "a");
+    /* element rows carry a null value by engine contract
+     * (node_value serves non-element nodes); the tree snapshot
+     * provides their text. */
+    assert.equal(nodes.nodes[0].value, null);
+    const count = await xpathFull(id, "count(//*)");
+    assert.equal(count.kind, 2);
+    assert.equal(count.number, 3);
+    const flag = await xpathFull(id, "count(//a) = 1");
+    assert.equal(flag.kind, 1);
+    assert.equal(flag.boolean, true);
+  } finally {
+    await close(id);
+  }
 });
