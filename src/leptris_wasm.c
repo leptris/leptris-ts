@@ -5,6 +5,7 @@
  * every string result is a malloc'd NUL-terminated buffer the
  * host frees with leptris_wasm_free_str after reading.
  */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -83,6 +84,16 @@ static int lw_json_string(LwJson* out, const char* value) {
 
 static int lw_json_nullable_string(LwJson* out, const char* value) {
     return value ? lw_json_string(out, value) : LW_JSON(out, "null");
+}
+
+static int lw_json_number(LwJson* out, double value) {
+    /* NaN/Infinity have no JSON literal (nodeset results carry NaN
+     * in the number slot) — emit null and let the host decide. */
+    if (value != value) return LW_JSON(out, "null");
+    char buf[40];
+    int n = snprintf(buf, sizeof buf, "%.17g", value);
+    if (n <= 0) return 0;
+    return lw_json_bytes(out, buf, (size_t)n);
 }
 
 static int lw_tree_attributes(LwJson* out, LeptrisElement element) {
@@ -278,6 +289,52 @@ char* leptris_wasm_xpath(int id, const char* expr) {
     char* s = leptris_xpath_result_string(r);
     leptris_xpath_result_free(r);
     return s;
+}
+
+/* Full result shape as JSON: {kind, string, boolean, number, nodes}.
+ * kind is the engine's LeptrisXPathResultType (0 nodeset, 1 boolean,
+ * 2 number, 3 string, 4 function item); nodes rows carry name/value
+ * string pairs in document order for nodeset results. NULL on
+ * evaluation failure or allocation failure. */
+char* leptris_wasm_xpath_full(int id, const char* expr) {
+    if (id < 1 || id > LW_MAX_DOCS || !lw_docs[id - 1] || !expr)
+        return NULL;
+    LeptrisXPathResult r =
+        leptris_xpath_eval(lw_docs[id - 1], NULL, expr);
+    if (!r) return NULL;
+    LwJson out = {NULL, 0, 0};
+    char* sv = leptris_xpath_result_string(r);
+    int ok = LW_JSON(&out, "{\"kind\":") &&
+             lw_json_number(&out, (double)leptris_xpath_result_type(r)) &&
+             LW_JSON(&out, ",\"string\":") &&
+             lw_json_string(&out, sv ? sv : "") &&
+             LW_JSON(&out, ",\"boolean\":") &&
+             (leptris_xpath_result_boolean(r) ? LW_JSON(&out, "true")
+                                              : LW_JSON(&out, "false")) &&
+             LW_JSON(&out, ",\"number\":") &&
+             lw_json_number(&out, leptris_xpath_result_number(r)) &&
+             LW_JSON(&out, ",\"nodes\":[");
+    free(sv);
+    size_t count = ok ? leptris_xpath_result_count(r) : 0;
+    for (size_t i = 0; ok && i < count; i++) {
+        const char* name = leptris_xpath_result_node_name(r, i);
+        const char* value = leptris_xpath_result_node_value(r, i);
+        ok = (i ? LW_JSON(&out, ",") : 1) &&
+             LW_JSON(&out, "{\"name\":") &&
+             lw_json_nullable_string(&out, name) &&
+             LW_JSON(&out, ",\"value\":") &&
+             lw_json_nullable_string(&out, value) &&
+             LW_JSON(&out, ",\"kind\":") &&
+             lw_json_number(&out,
+                 (double)leptris_xpath_result_node_kind(r, i)) &&
+             LW_JSON(&out, "}");
+    }
+    leptris_xpath_result_free(r);
+    if (!ok || !LW_JSON(&out, "]}")) {
+        free(out.data);
+        return NULL;
+    }
+    return out.data;
 }
 
 void leptris_wasm_close(int id) {

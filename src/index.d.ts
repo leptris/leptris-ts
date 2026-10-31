@@ -24,6 +24,18 @@ export function xml(id: number): Promise<string>;
  * value, atomics yield their string form. */
 export function xpath(id: number, expr: string): Promise<string | null>;
 
+/** Full XPath result shape (see index.js xpathFull). */
+export function xpathFull(
+  id: number,
+  expr: string,
+): Promise<{
+  kind: number;
+  string: string;
+  boolean: boolean;
+  number: number;
+  nodes: { name: string | null; value: string | null; kind: number }[];
+} | null>;
+
 /** Release a document. */
 export function close(id: number): Promise<void>;
 

@@ -120,6 +120,22 @@ export async function xpath(id, expr) {
   }
 }
 
+/** Full XPath result shape: {kind, string, boolean, number, nodes}.
+ * kind is the engine enum (0 nodeset, 1 boolean, 2 number, 3 string,
+ * 4 function item); nodes rows are {name, value, kind} in document
+ * order for nodeset results. */
+export async function xpathFull(id, expr) {
+  await init();
+  const buf = enc(expr);
+  try {
+    const ptr = theMod._leptris_wasm_xpath_full(id, buf);
+    if (!ptr) return null;
+    return JSON.parse(readStr(ptr, true));
+  } finally {
+    theMod._free(buf);
+  }
+}
+
 /** Release a document. */
 export async function close(id) {
   await init();
