@@ -4,7 +4,7 @@
 // evaluation. Documents live in the wasm registry addressed by an
 // integer id; load/close bracket their lifetime.
 
-export const VERSION = "1.9.356";
+export const VERSION = "1.9.410";
 
 export class XmlError extends Error {
   constructor(message, line, column) {
@@ -106,6 +106,14 @@ export async function xml(id) {
   return readStr(ptr, true);
 }
 
+/** Serialize synchronously after awaiting init(). */
+export function xmlSync(id) {
+  requireInitialized();
+  const ptr = theMod._leptris_wasm_xml(id);
+  if (!ptr) throw new XmlError("serialization failed", 0, 0);
+  return readStr(ptr, true);
+}
+
 /** Evaluate an XPath; nodesets yield the first node's string
  * value, atomics yield their string form. NULL result = null. */
 export async function xpath(id, expr) {
@@ -160,4 +168,107 @@ export function treeSync(id) {
   const ptr = theMod._leptris_wasm_tree(id);
   if (!ptr) throw new XmlError("tree export failed", 0, 0);
   return JSON.parse(readStr(ptr, true));
+}
+
+/* ---- write face: create/set/attach (leptris-ts) -------------------
+ * Node handles are opaque engine addresses (uint32); serialization
+ * reads them back through the document registry. Synchronous after
+ * await init(); the async twins delegate. */
+
+function requireDoc(id) {
+  requireInitialized();
+  if (!Number.isInteger(id) || id < 1) {
+    throw new XmlError("invalid document id", 0, 0);
+  }
+}
+
+/** Create a detached element owned by `id`'s document. Returns the
+ * node handle (opaque address) for appendChild/setAttribute. */
+export function createElementSync(id, name) {
+  requireDoc(id);
+  const cname = enc(name);
+  try {
+    const addr = theMod._leptris_wasm_create_element(id, cname);
+    if (!addr) throw new XmlError(readStr(theMod._leptris_wasm_last_error(), false) || "create_element failed", 0, 0);
+    return addr;
+  } finally {
+    theMod._free(cname);
+  }
+}
+
+/** Create a detached text node owned by `id`'s document. */
+export function createTextSync(id, text) {
+  requireDoc(id);
+  const ctext = enc(text);
+  try {
+    const addr = theMod._leptris_wasm_create_text(id, ctext);
+    if (!addr) throw new XmlError(readStr(theMod._leptris_wasm_last_error(), false) || "create_text failed", 0, 0);
+    return addr;
+  } finally {
+    theMod._free(ctext);
+  }
+}
+
+/** Set (or replace) an attribute on the element at `elem`. */
+export function setAttributeSync(elem, name, value) {
+  requireInitialized();
+  if (!elem) throw new XmlError("invalid node handle", 0, 0);
+  const cname = enc(name);
+  const cvalue = enc(value);
+  try {
+    const st = theMod._leptris_wasm_set_attribute(elem, cname, cvalue);
+    if (st !== 0) throw new XmlError("set_attribute failed (status " + st + ")", 0, 0);
+  } finally {
+    theMod._free(cname);
+    theMod._free(cvalue);
+  }
+}
+
+/** Append `child` under `parent`. Returns the EFFECTIVE installed
+ * handle — a foreign-node attach is adopted by copy, so keep the
+ * returned handle for later calls. */
+export function appendChildSync(parent, child) {
+  requireInitialized();
+  if (!parent || !child) throw new XmlError("invalid node handle", 0, 0);
+  const installedBuf = theMod._malloc(4);
+  if (!installedBuf) throw new XmlError("allocation failed", 0, 0);
+  try {
+    const st = theMod._leptris_wasm_add_child(parent, child, installedBuf);
+    if (st !== 0) throw new XmlError("add_child failed (status " + st + ")", 0, 0);
+    return theMod.HEAPU8[installedBuf] |
+           (theMod.HEAPU8[installedBuf + 1] << 8) |
+           (theMod.HEAPU8[installedBuf + 2] << 16) |
+           (theMod.HEAPU8[installedBuf + 3] << 24) >>> 0;
+  } finally {
+    theMod._free(installedBuf);
+  }
+}
+
+/** Set the document's root element (attaches a detached element). */
+export function setRootSync(id, elem) {
+  requireDoc(id);
+  if (!elem) throw new XmlError("invalid node handle", 0, 0);
+  const st = theMod._leptris_wasm_set_root(id, elem);
+  if (st !== 0) throw new XmlError("set_root failed (status " + st + ")", 0, 0);
+}
+
+export async function createElement(id, name) {
+  await init();
+  return createElementSync(id, name);
+}
+export async function createText(id, text) {
+  await init();
+  return createTextSync(id, text);
+}
+export async function setAttribute(elem, name, value) {
+  await init();
+  return setAttributeSync(elem, name, value);
+}
+export async function appendChild(parent, child) {
+  await init();
+  return appendChildSync(parent, child);
+}
+export async function setRoot(id, elem) {
+  await init();
+  return setRootSync(id, elem);
 }

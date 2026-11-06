@@ -71,3 +71,17 @@ export function tree(id: number): Promise<XmlElement>;
 export function loadSync(xml: string): number;
 export function closeSync(id: number): void;
 export function treeSync(id: number): XmlElement;
+
+/* ---- write face: create/set/attach --------------------------------
+ * Node handles are opaque engine addresses (numbers); serialize
+ * through xml(id) after attaching. */
+export function createElementSync(id: number, name: string): number;
+export function createTextSync(id: number, text: string): number;
+export function setAttributeSync(elem: number, name: string, value: string): void;
+export function appendChildSync(parent: number, child: number): number;
+export function setRootSync(id: number, elem: number): void;
+export function createElement(id: number, name: string): Promise<number>;
+export function createText(id: number, text: string): Promise<number>;
+export function setAttribute(elem: number, name: string, value: string): Promise<void>;
+export function appendChild(parent: number, child: number): Promise<number>;
+export function setRoot(id: number, elem: number): Promise<void>;

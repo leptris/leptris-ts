@@ -358,3 +358,47 @@ void leptris_wasm_last_error_position(int* line, int* column) {
 const char* leptris_wasm_version(void) {
     return leptris_version();
 }
+
+/* ---- write face (leptris-ts: create/set/attach through the shim) --
+ * Node handles are raw engine ADDRESSES passed as uint32 (the
+ * #1854/#408 address-based faces — no pointer wrappers cross the
+ * boundary). Addresses are opaque to the host; a 0 return means
+ * failure and leptris_wasm_last_error explains it. */
+
+uintptr_t leptris_wasm_create_element(int id, const char* name) {
+    if (id < 1 || id > LW_MAX_DOCS || !lw_docs[id - 1] || !name) return 0;
+    LeptrisElement e = leptris_element_create(lw_docs[id - 1], name);
+    return (uintptr_t)e;
+}
+
+uintptr_t leptris_wasm_create_text(int id, const char* text) {
+    if (id < 1 || id > LW_MAX_DOCS || !lw_docs[id - 1] || !text) return 0;
+    return (uintptr_t)leptris_text_node_create(lw_docs[id - 1], text);
+}
+
+int leptris_wasm_set_attribute(uint32_t elem, const char* name,
+                               const char* value) {
+    if (!elem || !name || !value) return -1;
+    return (int)leptris_element_set_attribute((LeptrisElement)elem, name,
+                                              value);
+}
+
+/* Attach `child` under `parent` (same document), writing the
+ * EFFECTIVE installed address (adoption by copy for foreign nodes,
+ * #1528) through `installed` when non-NULL. Returns the engine
+ * status. */
+int leptris_wasm_add_child(uint32_t parent, uint32_t child,
+                           uint32_t* installed) {
+    if (!parent || !child) return -1;
+    uintptr_t installed_addr = 0;
+    LeptrisStatus st = leptris_element_add_child_addr_installed(
+        parent, child, &installed_addr);
+    if (st == LEPTRIS_OK && installed) *installed = (uint32_t)installed_addr;
+    return (int)st;
+}
+
+int leptris_wasm_set_root(int id, uint32_t elem) {
+    if (id < 1 || id > LW_MAX_DOCS || !lw_docs[id - 1] || !elem) return -1;
+    return (int)leptris_document_set_root(lw_docs[id - 1],
+                                          (LeptrisElement)elem);
+}
