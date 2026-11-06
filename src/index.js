@@ -4,7 +4,7 @@
 // evaluation. Documents live in the wasm registry addressed by an
 // integer id; load/close bracket their lifetime.
 
-export const VERSION = "1.9.410";
+export const VERSION = "1.9.412";
 
 export class XmlError extends Error {
   constructor(message, line, column) {
