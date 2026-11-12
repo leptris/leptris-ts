@@ -20,6 +20,9 @@ export function load(xml: string): Promise<number>;
 /** Serialize a document to XML (the engine's canonical emit). */
 export function xml(id: number): Promise<string>;
 
+/** Serialize synchronously after awaiting init(). */
+export function xmlSync(id: number): string;
+
 /** Evaluate an XPath; nodesets yield the first node's string
  * value, atomics yield their string form. */
 export function xpath(id: number, expr: string): Promise<string | null>;
