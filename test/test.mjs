@@ -32,9 +32,31 @@ test("tree: synchronous and asynchronous snapshots", async () => {
     const snapshot = treeSync(id);
     assert.equal(snapshot.kind, "element");
     assert.equal(snapshot.name, "r");
-    assert.deepEqual(snapshot.attributes, [["a", "1"]]);
+    assert.deepEqual(snapshot.attributes, [["a", "1", null]]);
     assert.deepEqual(snapshot.children, [{ kind: "text", text: "text" }]);
     assert.deepEqual(await tree(id), snapshot);
+  } finally {
+    await close(id);
+  }
+});
+
+test("tree: attribute namespaceURI resolves from the in-scope declarations (ts#66)", async () => {
+  const id = await load(
+    '<root xmlns:aci="urn:aci" aci:channel="Fe" plain="1">' +
+    '<e xmlns:ac2="urn:ac2" ac2:x="9"/></root>'
+  );
+  try {
+    const snapshot = treeSync(id);
+    const byName = (rows, n) => rows.find((a) => a[0] === n);
+    const aci = byName(snapshot.attributes, "aci:channel");
+    const plain = byName(snapshot.attributes, "plain");
+    const decl = byName(snapshot.attributes, "xmlns:aci");
+    assert.equal(aci[2], "urn:aci"); // RESOLVED, not the literal prefix
+    assert.equal(plain[2], null); // unprefixed attributes carry no URI
+    assert.equal(decl[2], null); // declarations ARE the declarations
+    const [e] = snapshot.children;
+    const ac2 = e.attributes.find((a) => a[0] === "ac2:x");
+    assert.equal(ac2[2], "urn:ac2"); // the inner scope wins
   } finally {
     await close(id);
   }

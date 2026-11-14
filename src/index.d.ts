@@ -42,7 +42,10 @@ export function xpathFull(
 /** Release a document. */
 export function close(id: number): Promise<void>;
 
-/** Detached root snapshot; ordered attributes include local xmlns declarations. */
+/** Detached root snapshot; ordered attributes include local xmlns declarations.
+ * Each attribute is [name, value, namespaceURI|null] — the third slot is the
+ * RESOLVED namespace URI (null for declarations and unprefixed attributes),
+ * so attribute classification matches element classification (ts#66). */
 export interface XmlElement {
   readonly kind: "element";
   readonly name: string;
@@ -50,7 +53,11 @@ export interface XmlElement {
   readonly prefix: string | null;
   readonly namespaceURI: string | null;
   /** Ordinary values are engine-decoded; xmlns values retain lexical spelling. */
-  readonly attributes: readonly (readonly [name: string, value: string])[];
+  readonly attributes: readonly (readonly [
+    name: string,
+    value: string,
+    namespaceURI: string | null,
+  ])[];
   readonly children: readonly XmlNode[];
 }
 export interface XmlText {
