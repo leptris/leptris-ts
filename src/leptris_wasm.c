@@ -114,22 +114,35 @@ static int lw_tree_attributes(LwJson* out, LeptrisElement element) {
          * reject a disagreement rather than silently omit or mispair content.
          * Namespace declarations retain the engine's raw declaration value. */
         const char* value = NULL;
+        const char* attr_ns = NULL;
+        int declaration = names[i] && (strcmp(names[i], "xmlns") == 0 ||
+                                       strncmp(names[i], "xmlns:", 6) == 0);
         if (names[i]) {
-            int declaration = strcmp(names[i], "xmlns") == 0 ||
-                              strncmp(names[i], "xmlns:", 6) == 0;
             if (declaration) {
                 value = values[i];
             } else if (attribute) {
                 const char* name = leptris_attribute_get_name(attribute);
                 if (name && strcmp(name, names[i]) == 0) {
                     value = leptris_attribute_get_value(element, attribute);
+                    /* ts#66: capture the resolved URI while the chain
+                     * cursor still points at THIS pair. */
+                    attr_ns = leptris_attribute_namespace_uri(attribute);
                     attribute = leptris_attribute_next(attribute);
                 }
             }
         }
         if (i) ok = LW_JSON(out, ",");
+        /* ts#66: the third slot carries the RESOLVED namespace URI
+         * (leptris_attribute_namespace_uri) so attribute
+         * classification matches element classification — the read
+         * face stops forcing consumers to re-track xmlns
+         * declarations. Declarations resolve to null (they ARE the
+         * declarations); unpaired raw rows resolve to null rather
+         * than guessing. */
         if (ok) ok = LW_JSON(out, "[") && lw_json_string(out, names[i]) &&
                      LW_JSON(out, ",") && lw_json_string(out, value) &&
+                     LW_JSON(out, ",") &&
+                     lw_json_nullable_string(out, attr_ns) &&
                      LW_JSON(out, "]");
     }
     if (attribute) ok = 0;
