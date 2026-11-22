@@ -8,7 +8,27 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 ENGINESRC="${ENGINESRC:-../leptris/src}"
-VERSION="${LEPTRIS_VERSION:-1.9.390}"
+# Version truth: read the engine's own project version out of its
+# CMakeLists. The old hardcoded default leaked a stale number into
+# published payloads (npm 0.1.66/0.1.67 shipped engine-432 content
+# reporting leptris_version() == 1.9.390) — never default again.
+ENGINE_ROOT="$(dirname "$ENGINESRC")"
+VERSION="${LEPTRIS_VERSION:-$(grep -m1 '^    VERSION [0-9][0-9.]*' "$ENGINE_ROOT/CMakeLists.txt" 2>/dev/null | awk '{print $NF}' || true)}"
+if [ -z "$VERSION" ]; then
+  echo "cannot determine engine version from $ENGINE_ROOT/CMakeLists.txt" >&2
+  exit 1
+fi
+# Stamp the ES module's VERSION export from the same single source —
+# the hand-written constant used to drift independently (it shipped
+# 1.9.421 while the wasm carried a different value).
+STAMP="export const VERSION = \"$VERSION\";"
+if grep -q '^export const VERSION = ' src/index.js; then
+  tmp=$(mktemp)
+  awk -v line="$STAMP" 'BEGIN{d=0} /^export const VERSION = /{if(!d){print line; d=1; next}} {print}' src/index.js > "$tmp" && mv "$tmp" src/index.js
+else
+  echo "src/index.js lost its VERSION export — stamping needs the anchor line" >&2
+  exit 1
+fi
 mkdir -p dist
 INC="-I$ENGINESRC/include -I$ENGINESRC \
  -I$ENGINESRC/leptris/dom -I$ENGINESRC/leptris/parse \

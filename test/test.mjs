@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { load, xml, xpath, xpathFull, tree, treeSync, close, version, XmlError } from "../src/index.js";
+import { load, xml, xpath, xpathFull, tree, treeSync, close, version, VERSION, XmlError } from "../src/index.js";
 
 const DOC = `<?xml version="1.0"?>
 <catalog id="c1">
@@ -76,6 +76,16 @@ test("empty and self-closing shapes", async () => {
 
 test("version", async () => {
   assert.match(await version(), /^1\./);
+});
+
+test("version truth: the VERSION export is the engine's own leptris_version()", async () => {
+  // npm 0.1.66/0.1.67 shipped wasm carrying one engine version while
+  // the hand-written VERSION export reported another (1.9.390 vs
+  // 1.9.421). Consumers gate behavior on the memo version — the two
+  // surfaces must never disagree.
+  const engine = await version();
+  assert.match(VERSION, /^\d+\.\d+\.\d+$/, "VERSION must be version-shaped");
+  assert.equal(VERSION, engine, `VERSION export (${VERSION}) drifted from the wasm's leptris_version() (${engine})`);
 });
 
 test("xpathFull exposes the engine result shape", async () => {
