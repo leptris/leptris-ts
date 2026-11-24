@@ -415,3 +415,191 @@ int leptris_wasm_set_root(int id, uint32_t elem) {
     return (int)leptris_document_set_root(lw_docs[id - 1],
                                           (LeptrisElement)elem);
 }
+
+/* ---- validation faces (leptris-ts#92): XSD 1.1 + ISO Schematron ----
+ * Schemas live in their own registries addressed by 1-based ids
+ * (0 = failure), mirroring the document registry. Instances are
+ * documents already registered by leptris_wasm_load. Schema-owned
+ * error strings are copied out so the host frees with free_str
+ * without touching engine lifetimes. */
+
+#define LW_MAX_SCHEMAS 16
+
+static LeptrisXsdSchema lw_xsd[LW_MAX_SCHEMAS];
+static LeptrisSchematron lw_sch[LW_MAX_SCHEMAS];
+
+static char* lw_strdup(const char* s) {
+    size_t n = strlen(s) + 1;
+    char* out = (char*)malloc(n);
+    if (out) memcpy(out, s, n);
+    return out;
+}
+
+static LeptrisXsdSchema lw_xsd_at(int id) {
+    if (id < 1 || id > LW_MAX_SCHEMAS) return NULL;
+    return lw_xsd[id - 1];
+}
+
+static LeptrisSchematron lw_sch_at(int id) {
+    if (id < 1 || id > LW_MAX_SCHEMAS) return NULL;
+    return lw_sch[id - 1];
+}
+
+static LeptrisDocument lw_doc_at(int id) {
+    if (id < 1 || id > LW_MAX_DOCS) return NULL;
+    return lw_docs[id - 1];
+}
+
+/* Compile XSD schema text. The engine hands back an error-carrying
+ * handle for a malformed schema (xsd_error says why); it is still
+ * registered so the host can read the detail and free it. */
+int leptris_wasm_xsd_compile(const char* text, size_t len) {
+    if (!text || !len) return 0;
+    int id = 0;
+    for (int i = 0; i < LW_MAX_SCHEMAS; i++)
+        if (!lw_xsd[i]) { id = i + 1; break; }
+    if (!id) return 0;
+    LeptrisXsdSchema s = leptris_xsd_compile(text, len, NULL);
+    if (!s) return 0;
+    lw_xsd[id - 1] = s;
+    return id;
+}
+
+void leptris_wasm_xsd_close(int id) {
+    if (id < 1 || id > LW_MAX_SCHEMAS) return;
+    if (lw_xsd[id - 1]) {
+        leptris_xsd_free(lw_xsd[id - 1]);
+        lw_xsd[id - 1] = NULL;
+    }
+}
+
+/* Compile error detail (NULL when the schema is valid or the id is
+ * stale). Malloc'd; the host frees with free_str. */
+char* leptris_wasm_xsd_error(int id) {
+    LeptrisXsdSchema s = lw_xsd_at(id);
+    const char* e = s ? leptris_xsd_error(s) : NULL;
+    return e ? lw_strdup(e) : NULL;
+}
+
+/* Effective XSD version ("1.1" or "1.0"); NULL on a stale id. */
+char* leptris_wasm_xsd_version(int id) {
+    LeptrisXsdSchema s = lw_xsd_at(id);
+    const char* v = s ? leptris_xsd_version(s) : NULL;
+    return v ? lw_strdup(v) : NULL;
+}
+
+int leptris_wasm_xsd_declaration_count(int id) {
+    LeptrisXsdSchema s = lw_xsd_at(id);
+    return s ? (int)leptris_xsd_declaration_count(s) : -1;
+}
+
+/* -1 = unknown built-in name (no schema involved). */
+int leptris_wasm_xsd_builtin_valid(const char* builtin,
+                                   const char* lexical) {
+    if (!builtin || !lexical) return -1;
+    return leptris_xsd_builtin_valid(builtin, lexical);
+}
+
+/* -1 = unknown simpleType or stale schema id. */
+int leptris_wasm_xsd_simple_valid(int id, const char* type_name,
+                                  const char* lexical) {
+    LeptrisXsdSchema s = lw_xsd_at(id);
+    if (!s || !type_name || !lexical) return -1;
+    return leptris_xsd_simple_valid(s, type_name, lexical);
+}
+
+/* Instance validation. -1 = stale schema or document id. */
+int leptris_wasm_xsd_validate(int id, int doc_id) {
+    LeptrisXsdSchema s = lw_xsd_at(id);
+    LeptrisDocument doc = lw_doc_at(doc_id);
+    if (!s || !doc) return -1;
+    return leptris_xsd_validate(s, doc);
+}
+
+/* Structured findings of the LAST validate call as a JSON array of
+ * {kind, component, line, column, message} rows (#1841 report
+ * shape). "[]" when the document was valid; NULL on a stale id or
+ * allocation failure. */
+char* leptris_wasm_xsd_error_report(int id) {
+    LeptrisXsdSchema s = lw_xsd_at(id);
+    if (!s) return NULL;
+    const LeptrisXsdErrorRecord* rows = NULL;
+    size_t n = leptris_xsd_error_report(s, &rows);
+    LwJson out = {NULL, 0, 0};
+    int ok = LW_JSON(&out, "[");
+    for (size_t i = 0; ok && i < n; i++) {
+        ok = (i ? LW_JSON(&out, ",") : 1) &&
+             LW_JSON(&out, "{\"kind\":") &&
+             lw_json_nullable_string(&out, rows[i].kind) &&
+             LW_JSON(&out, ",\"component\":") &&
+             lw_json_nullable_string(&out, rows[i].component) &&
+             LW_JSON(&out, ",\"line\":") &&
+             lw_json_number(&out, (double)rows[i].line) &&
+             LW_JSON(&out, ",\"column\":") &&
+             lw_json_number(&out, (double)rows[i].column) &&
+             LW_JSON(&out, ",\"message\":") &&
+             lw_json_nullable_string(&out, rows[i].message) &&
+             LW_JSON(&out, "}");
+    }
+    if (!ok || !LW_JSON(&out, "]")) {
+        free(out.data);
+        return NULL;
+    }
+    return out.data;
+}
+
+/* Compile Schematron schema text; @p phase (NULL or empty) keeps
+ * every pattern. NULL return = compile failure (detail via
+ * leptris_wasm_last_error — the engine reports through the
+ * thread-local channel). */
+int leptris_wasm_schematron_compile(const char* text, size_t len,
+                                    const char* phase) {
+    if (!text || !len) return 0;
+    int id = 0;
+    for (int i = 0; i < LW_MAX_SCHEMAS; i++)
+        if (!lw_sch[i]) { id = i + 1; break; }
+    if (!id) return 0;
+    LeptrisSchematron s =
+        leptris_schematron_parse_phase(text, len, phase, NULL);
+    if (!s) return 0;
+    lw_sch[id - 1] = s;
+    return id;
+}
+
+void leptris_wasm_schematron_close(int id) {
+    if (id < 1 || id > LW_MAX_SCHEMAS) return;
+    if (lw_sch[id - 1]) {
+        leptris_schematron_free(lw_sch[id - 1]);
+        lw_sch[id - 1] = NULL;
+    }
+}
+
+/* Schema-level error detail (NULL when none or the id is stale). */
+char* leptris_wasm_schematron_error(int id) {
+    LeptrisSchematron s = lw_sch_at(id);
+    const char* e = s ? leptris_schematron_error(s) : NULL;
+    return e ? lw_strdup(e) : NULL;
+}
+
+/* Validity = zero failed asserts. -1 = stale schema or document id
+ * (the engine folds bad args into 0; the shim separates them). */
+int leptris_wasm_schematron_valid(int id, int doc_id) {
+    LeptrisSchematron s = lw_sch_at(id);
+    LeptrisDocument doc = lw_doc_at(doc_id);
+    if (!s || !doc) return -1;
+    return leptris_schematron_valid(s, doc);
+}
+
+/* The SVRL report serialized to XML (malloc'd, freed with free_str),
+ * or NULL on failure. The engine's report document is freed here —
+ * no DOM handles cross the boundary. */
+char* leptris_wasm_schematron_validate(int id, int doc_id) {
+    LeptrisSchematron s = lw_sch_at(id);
+    LeptrisDocument doc = lw_doc_at(doc_id);
+    if (!s || !doc) return NULL;
+    LeptrisDocument svrl = leptris_schematron_validate(s, doc);
+    if (!svrl) return NULL;
+    char* xml = leptris_document_serialize(svrl, NULL);
+    leptris_document_free(svrl);
+    return xml;
+}

@@ -44,4 +44,6 @@ jobs:
             exit 1
           }
       - name: Test
-        run: node --test test/test.mjs
+        # The full package script (test/*.test.mjs + test/test.mjs) —
+        # a single-file invocation let stale specs rot unnoticed.
+        run: npm test

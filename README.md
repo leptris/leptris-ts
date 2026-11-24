@@ -82,3 +82,41 @@ first; they throw before initialization. Async `load`, `tree` and `close`
 remain available. Concurrent first calls share initialization. Always release
 documents in `finally`: the registry supports at most 64 live documents.
 TypeScript exposes snapshots as read-only views of detached data.
+
+## Validation: XSD and Schematron
+
+Schemas compile once into their own registry (16 live schemas) and
+validate any number of loaded documents. Every face has a `Sync`
+twin (after `await init()`).
+
+```js
+import { load, close, xsdCompile, xsdValidate, xsdErrorReportSync,
+         xsdCloseSync, schematronCompile, schematronValid,
+         schematronValidate, schematronCloseSync } from "leptris";
+
+// XSD — 1.1 semantics apply when the schema root carries
+// @version="1.1" (the engine's own selection).
+const schema = await xsdCompile(`<xs:schema .../>`);
+const doc = await load("<order>...</order>");
+if (!(await xsdValidate(schema, doc))) {
+  for (const f of xsdErrorReportSync(schema))   // findings of the
+    console.log(f.kind, f.line, f.message);     // LAST validate call
+}
+await close(doc);
+xsdCloseSync(schema);
+
+// Schematron — validity = zero failed asserts; the SVRL report
+// comes back as XML (parse it with load() to query).
+const sch = await schematronCompile(schemaText /* , phase */);
+if (!(await schematronValid(sch, doc))) {
+  const svrl = await schematronValidate(sch, doc); // or null
+}
+schematronCloseSync(sch);
+```
+
+Failures surface as `XsdError` / `SchematronError` (both extend
+`XmlError`): malformed schemas throw at compile with the engine's
+detail; stale schema or document ids throw on the validating faces.
+`xsdBuiltinValid("xs:date", s)` / `xsdSimpleValid(id, name, s)`
+check lexical values without a document, returning `null` for an
+unknown type name.
