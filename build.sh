@@ -37,6 +37,12 @@ INC="-I$ENGINESRC/include -I$ENGINESRC \
  -I$ENGINESRC/leptris/flat -I$ENGINESRC/leptris/unicode"
 SOURCES=$(ls "$ENGINESRC"/leptris/*.c "$ENGINESRC"/leptris/*/*.c \
   | grep -v -E 'simd_text_(avx2|neon)\.c|leptris/unicode/unicode\.c|leptris/encoding/encoding\.c')
+# The validation faces (leptris-ts#92) recurse like the native engine
+# expects to — xsd_compile's capture walks nested models with 4KB path
+# buffers per frame, and schematron evaluates XPath per assert. The
+# 64KB default wasm stack traps with "memory access out of bounds" on
+# ordinary schemas; match a realistic native stack.
+LEPTRIS_STACK_SIZE="${LEPTRIS_STACK_SIZE:-5242880}"
 emcc -O3 -std=c99 \
   $INC \
   -DLEPTRIS_VERSION="\"$VERSION\"" \
@@ -45,8 +51,9 @@ emcc -O3 -std=c99 \
   $SOURCES \
   -s MODULARIZE=1 -s EXPORT_ES6=1 -s ENVIRONMENT=web,node \
   -s EXPORTED_RUNTIME_METHODS="['UTF8ToString','stringToUTF8','lengthBytesUTF8','HEAPU8','HEAP32']" \
-  -s EXPORTED_FUNCTIONS='["_leptris_wasm_tree","_leptris_wasm_load","_leptris_wasm_xml","_leptris_wasm_xml_len","_leptris_wasm_xpath","_leptris_wasm_xpath_full","_leptris_wasm_close","_leptris_wasm_free_str","_leptris_wasm_last_error","_leptris_wasm_last_error_position","_leptris_wasm_version","_malloc","_free","_leptris_wasm_create_element","_leptris_wasm_create_text","_leptris_wasm_set_attribute","_leptris_wasm_add_child","_leptris_wasm_set_root"]' \
+  -s EXPORTED_FUNCTIONS='["_leptris_wasm_tree","_leptris_wasm_load","_leptris_wasm_xml","_leptris_wasm_xml_len","_leptris_wasm_xpath","_leptris_wasm_xpath_full","_leptris_wasm_close","_leptris_wasm_free_str","_leptris_wasm_last_error","_leptris_wasm_last_error_position","_leptris_wasm_version","_malloc","_free","_leptris_wasm_create_element","_leptris_wasm_create_text","_leptris_wasm_set_attribute","_leptris_wasm_add_child","_leptris_wasm_set_root","_leptris_wasm_xsd_compile","_leptris_wasm_xsd_close","_leptris_wasm_xsd_error","_leptris_wasm_xsd_version","_leptris_wasm_xsd_declaration_count","_leptris_wasm_xsd_builtin_valid","_leptris_wasm_xsd_simple_valid","_leptris_wasm_xsd_validate","_leptris_wasm_xsd_error_report","_leptris_wasm_schematron_compile","_leptris_wasm_schematron_close","_leptris_wasm_schematron_error","_leptris_wasm_schematron_valid","_leptris_wasm_schematron_validate"]' \
   -s WASM_BIGINT=1 \
   -s ALLOW_MEMORY_GROWTH=1 \
+  -s STACK_SIZE="$LEPTRIS_STACK_SIZE" \
   -o dist/leptris.mjs
 ls -la dist/

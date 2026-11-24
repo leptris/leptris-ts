@@ -28,7 +28,7 @@ test("mixed-content snapshot preserves namespaces, attribute order and node kind
     assert.equal(snapshot.localName,"r");
     assert.equal(snapshot.prefix,"p");
     assert.equal(snapshot.namespaceURI,"urn:p");
-    assert.deepEqual(snapshot.attributes,[["first","1"],["xmlns:p","urn:p"],["p:a","2"]]);
+    assert.deepEqual(snapshot.attributes,[["first","1",null],["xmlns:p","urn:p",null],["p:a","2","urn:p"]]);
     assert.deepEqual(snapshot.children.map(n=>n.kind),["text","cdata","comment","pi","element","text"]);
     assert.deepEqual(snapshot.children[3],{kind:"pi",target:"pi",text:"data"});
     assert.equal(snapshot.children[4].namespaceURI,"urn:p");
@@ -65,7 +65,7 @@ test("empty nodes and namespace undeclarations remain visible", async () => {
     const snapshot=treeSync(id);
     assert.equal(snapshot.namespaceURI,"urn:r");
     assert.ok(snapshot.children[0].namespaceURI===null || snapshot.children[0].namespaceURI==="");
-    assert.deepEqual(snapshot.children[0].attributes,[["xmlns",""]]);
+    assert.deepEqual(snapshot.children[0].attributes,[["xmlns","",null]]);
     assert.deepEqual(snapshot.children[0].children,[]);
   } finally { closeSync(id); }
 });
@@ -83,14 +83,14 @@ test("attribute snapshots support long namespace prefixes and distinct namespace
   const id=loadSync(`<r xmlns:${prefix}="urn:long" xmlns:a="urn:a" xmlns:b="urn:b" ${prefix}:v="&quot;" a:v="one" b:v="two"/>`);
   try {
     const snapshot=treeSync(id);
-    assert.deepEqual(snapshot.attributes.slice(3),[[`${prefix}:v`,'"'],["a:v","one"],["b:v","two"]]);
+    assert.deepEqual(snapshot.attributes.slice(3),[[`${prefix}:v`,'"',"urn:long"],["a:v","one","urn:a"],["b:v","two","urn:b"]]);
   } finally {closeSync(id);}
 });
 
 test("namespace declarations retain lexical entity references",async()=>{
   await init();
   const id=loadSync('<r xmlns:p="urn:a&amp;b"><p:c/></r>');
-  try {assert.deepEqual(treeSync(id).attributes,[["xmlns:p","urn:a&amp;b"]]);}
+  try {assert.deepEqual(treeSync(id).attributes,[["xmlns:p","urn:a&amp;b",null]]);}
   finally {closeSync(id);}
 });
 
